@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Create a new shell script on the fly
-# Generates shell file with shebang,
+# Checks your command is not already in use,
+# generates shell file with shebang,
 # sets executable permissions,
 # writes to ~/bin or user specified directory
 # (optional) adds directory to .bash_profile for home root access

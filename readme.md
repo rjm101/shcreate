@@ -1,5 +1,6 @@
 # shcreate - Shell script creator
 Create a new shell script on the fly
+ - Checks your command is not already in use
  - Generates shell file with shebang
  - Sets executable permissions
  - Writes to ~/bin or user specified directory
