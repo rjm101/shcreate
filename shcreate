@@ -11,6 +11,9 @@
 # 
 # usage example:
 # shcreate [command] [shell directory path (optional)]
+source ./prmpt 
+bitbucket=/dev/null
+
 function generateFile() {
 	checkOpts "$1"
 	printLine
@@ -70,7 +73,7 @@ function verifyAvailableCommand() {
 # check if directory exists and creates one if not
 function setupShellDirectory() {
 	if [[ ! -d $filedir ]]; then
-		if mkdir "$filedir"; then
+		if mkdir -- "$filedir"; then
 			echo "Created shell directory: ${filedir}"
 			$createddirectory=true
 		else 
@@ -88,13 +91,13 @@ function checkExistingFile() {
 		exit 4;
 	else 
 		# create the file
-		touch $filepath
+		touch -- $filepath
 	fi 
 }
 
 # set executable permission of file
 function setFilePermissions() {
-	chmod u+x $filepath
+	chmod u+x -- $filepath
 
 	# check file permission
 	if [[ ! $(stat -l $filepath | grep "^-rwxr") ]]; then
@@ -118,25 +121,51 @@ function addTemplateContents() {
 function setGlobalCommand() {
 	# check if ~/bin|custom shell directory already exists in PATH
 	if [[ ! "$PATH" =~ (^|:)"$filedir"(:|$) ]]; then
-		# check if directory is in home .bash_profile
+		# check if bash profile exists
 		bashprofile="${HOME}/.bash_profile"
-		if [[ ! "$(cat "$bashprofile" | grep "$filedir" | grep "PATH")" ]]; then
-			# prompt if user wants to run command globally? 
-			echo "$filedir is not in your environment PATH"
-			echo "Do you want to add this command to ~/.bash_profile? [Y/N]"
-			while read -r -n 1; do
-				if [[ $REPLY = [Yy] ]]; then
-					if printf "\nexport PATH=\$PATH:$filedir" >> "$bashprofile"; then
-						printf "\n$filedir added to ${bashprofile}"
-					else
-						echo "WARNING: could not add shell directory export to ${bashprofile}"
-					fi
-					break
-				elif [[ $REPLY = [Nn] ]]; then
-					break
-				fi
-			done
+		# check if directory is in home .bash_profile
+		if [[ "$(cat "$bashprofile" | grep "$filedir" | grep "PATH")" || "$(echo $PATH | grep "$filedir")" ]]; then
+			echo "Check global command access: Bash directory already specified in \$PATH"
+		else
+			if [[ -e $bashprofile ]]; then
+				# prompt if user wants to run command globally? 
+				echo "$filedir is not in your environment PATH"
+				addPathToBashProfile $bashprofile
+			else 
+				echo "Bash directory not found in \$PATH or $bashprofile, this command will not be global."
+				generateBashProfile $bashprofile
+			fi
 		fi
+	fi
+}
+
+# provide the option to generate bash profile in the event it is not available
+function generateBashProfile() {
+	bashprofile=$1
+	if prmpt "Do you want to generate a .bash_profile to your home directory? [Y/N]"; then
+		touch -- $bashprofile
+		printf "if [ -n "\$BASH_VERSION" ]; then\n\tif [ -f "\$HOME/.bashrc" ]; then\n\t\t. "\$HOME/.bashrc"\n\tfi\nfi\n\nif [ -d "\$HOME/bin" ]; then\n\tPATH="\$HOME/bin:\$PATH"\nfi" > $bashprofile
+		if [[ -e $bashprofile ]]; then
+			addPathToBashProfile $bashprofile
+		fi
+	fi
+}
+
+# ask if user wants to add shell path to bash_profile
+function promptToAddPathToProfile() {
+	bashprofile=$1
+	if prmpt "Do you want to add this command to ~/.bash_profile? [Y/N]"; then
+		addPathToBashProfile $bashprofile
+	fi
+}
+
+# add shell path to bash_profile
+function addPathToBashProfile() {
+	bashprofile=$1
+	if printf "\nexport PATH=\$PATH:$filedir" >> "$bashprofile"; then
+		printf "\n$filedir added to ${bashprofile}"
+	else
+		echo "WARNING: could not add shell directory export to ${bashprofile}"
 	fi
 }
 
@@ -162,5 +191,4 @@ function openEditor() {
 }
 
 # init
-bitbucket=/dev/null
 generateFile "$1" "$2"

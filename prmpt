@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# simple prompt takes Yy / Nn as user input
+function prmpt() {
+	question=$1
+	echo $question
+	while read -r -n 1; do
+		if [[ $REPLY = [Yy] ]]; then
+			return 0
+		elif [[ $REPLY = [Nn] ]]; then
+			return 1
+		fi
+	done
+}
